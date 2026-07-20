@@ -25,6 +25,10 @@ spring:
         schema-initialization:
           enabled: true
       republish-outstanding-events-on-restart: true
+      # Outbound externalization to Kafka is OFF by default so the single-process
+      # H2 mode (and tests) never touch a broker. The web role turns it on.
+      externalization:
+        enabled: false
 
   # Kafka client config. Lazy: no connection unless a 'web'/'worker' profile
   # actually publishes or listens. Bootstrap address comes from the environment.
@@ -65,6 +69,10 @@ spring:
   config:
     activate:
       on-profile: web
+  modulith:
+    events:
+      externalization:
+        enabled: true
 
 ---
 # ── worker: no HTTP; consumes Kafka and runs the async work. Scale this tier. ─

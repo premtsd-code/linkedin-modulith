@@ -77,6 +77,19 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-jpa</artifactId>
         </dependency>
+        <!-- Event externalization: @Externalized routes domain events to Kafka for the
+             worker tier, replacing the hand-written KafkaEventBridge. Outbound only;
+             the inbound half is platform/messaging/InboundEventRelay. Active only when
+             spring.modulith.events.externalization.enabled=true (the web role). -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-kafka</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Databases: H2 for zero-setup local runs, Postgres for the real profile -->
         <dependency>
