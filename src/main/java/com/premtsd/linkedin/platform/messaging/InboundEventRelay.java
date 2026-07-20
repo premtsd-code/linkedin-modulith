@@ -2,7 +2,7 @@ package com.premtsd.linkedin.platform.messaging;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
  * Worker role only; the web tier has no relay bean.
  */
 @Component
-@ConditionalOnProperty(name = "app.role", havingValue = "worker")
+@ConditionalOnExpression("'${app.role:standalone}' == 'worker' and ${app.messaging.inbound-relay:true}")
 @RequiredArgsConstructor
 @Slf4j
 class InboundEventRelay {

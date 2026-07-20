@@ -103,6 +103,18 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway: owns the Postgres-only schema the jobs module needs — partial
+             indexes (claim/lease/dedupe) that Hibernate ddl-auto cannot express.
+             Disabled by default (H2 uses ddl-auto); enable under a Postgres baseline. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -154,6 +166,25 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers: the jobs runtime needs real Postgres (FOR UPDATE SKIP LOCKED),
+             so JobRuntimeTests spins up a container. Skipped automatically when Docker is
+             absent (@Testcontainers disabledWithoutDocker) so the H2 suite still runs. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

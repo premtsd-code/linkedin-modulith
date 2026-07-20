@@ -62,6 +62,19 @@ app:
   worker:
     group: ${WORKER_GROUP:linkedin-workers}
 
+# Durable job runtime (worker role). See the pitfalls before tuning:
+#   lease-duration MUST exceed the slowest single run() slice, or the reaper hands
+#   the job to a second worker and both execute; concurrency MUST stay under the
+#   Hikari pool size, or finishing jobs (each needs a connection) deadlock the poller.
+jobs:
+  poll-interval: 1s
+  reaper-interval: 30s
+  lease-duration: 60s
+  batch-size: 20
+  concurrency: 8
+  retry-base-delay: 5s
+  retry-max-delay: 15m
+
 ---
 # ── postgres: real relational store (used by the web/worker containers) ──────
 spring:
