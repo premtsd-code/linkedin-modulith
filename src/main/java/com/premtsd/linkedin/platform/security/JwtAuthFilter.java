@@ -1,4 +1,4 @@
-package com.premtsd.linkedin;
+package com.premtsd.linkedin.platform.security;
 
 import com.premtsd.linkedin.user.JwtService;
 import io.jsonwebtoken.Claims;

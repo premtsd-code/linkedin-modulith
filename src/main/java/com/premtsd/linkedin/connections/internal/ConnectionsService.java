@@ -19,7 +19,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-class ConnectionsService {
+public class ConnectionsService {
 
     private final ConnectionsGraph graph;
     private final ApplicationEventPublisher events;
@@ -52,7 +52,7 @@ class ConnectionsService {
     }
 
     @Transactional
-    void registerPerson(Long userId, String name) {
+    public void registerPerson(Long userId, String name) {
         graph.registerPerson(userId, name);
     }
 }

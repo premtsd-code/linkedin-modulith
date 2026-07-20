@@ -1,4 +1,4 @@
-package com.premtsd.linkedin;
+package com.premtsd.linkedin.platform.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

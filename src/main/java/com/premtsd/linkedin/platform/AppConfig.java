@@ -1,4 +1,4 @@
-package com.premtsd.linkedin;
+package com.premtsd.linkedin.platform;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

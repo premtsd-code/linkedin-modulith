@@ -41,13 +41,26 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "com.premtsd.linkedin.*"
+        # Explicit allow-list for JSON type headers — NEVER wildcard this; a
+        # wildcard is a deserialization attack surface (InboundEventRelay reads
+        # arbitrary broker payloads into JVM types).
+        spring.json.trusted.packages: "com.premtsd.linkedin.user.events,com.premtsd.linkedin.post.events,com.premtsd.linkedin.connections.events"
 
 jwt:
   secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-bytes-long!!}
 
 server:
   port: ${SERVER_PORT:8080}
+
+# Deployment role. Drives the bean-level conditions:
+#   standalone (default) — single process, everything in-process, no Kafka
+#   web                  — HTTP + externalize events to Kafka; no in-process workers
+#   worker               — no HTTP; InboundEventRelay + JobPoller drive the workers
+# The web/worker Spring profiles below set this; APP_ROLE can override.
+app:
+  role: ${APP_ROLE:standalone}
+  worker:
+    group: ${WORKER_GROUP:linkedin-workers}
 
 ---
 # ── postgres: real relational store (used by the web/worker containers) ──────
@@ -73,6 +86,8 @@ spring:
     events:
       externalization:
         enabled: true
+app:
+  role: web
 
 ---
 # ── worker: no HTTP; consumes Kafka and runs the async work. Scale this tier. ─
@@ -82,6 +97,8 @@ spring:
       on-profile: worker
   main:
     web-application-type: none
+app:
+  role: worker
 
 ---
 # ── cloudinary: cloud upload backend for the uploader module ─────────────────

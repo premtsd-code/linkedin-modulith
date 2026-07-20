@@ -1,4 +1,4 @@
-package com.premtsd.linkedin;
+package com.premtsd.linkedin.platform.web;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;

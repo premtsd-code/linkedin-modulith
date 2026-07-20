@@ -8,12 +8,12 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-class NotificationService {
+public class NotificationService {
 
     private final NotificationRepository repository;
 
     @Transactional
-    void create(Long userId, String message) {
+    public void create(Long userId, String message) {
         repository.save(Notification.builder().userId(userId).message(message).build());
     }
 
