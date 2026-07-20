@@ -13,5 +13,5 @@ public interface ConnectionGraphQuery {
      * Accepted-connection user ids of {@code userId}, strictly greater than {@code afterId},
      * ascending, capped at {@code limit}. Start a scan with {@code afterId = 0}.
      */
-    List<Long> followerIdsAfter(Long userId, long afterId, int limit);
+    List<Long> connectionIdsAfter(Long userId, long afterId, int limit);
 }

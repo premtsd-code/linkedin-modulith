@@ -33,7 +33,7 @@ interface ConnectionRequestRepository extends JpaRepository<ConnectionRequest, L
             ORDER BY other_id
             LIMIT :limit
             """, nativeQuery = true)
-    List<Long> findFollowerIdsAfter(@Param("userId") Long userId,
+    List<Long> findConnectionIdsAfter(@Param("userId") Long userId,
                                     @Param("afterId") long afterId,
                                     @Param("limit") int limit);
 }

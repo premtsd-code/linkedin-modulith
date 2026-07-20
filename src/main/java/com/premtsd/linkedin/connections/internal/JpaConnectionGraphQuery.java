@@ -18,7 +18,7 @@ class JpaConnectionGraphQuery implements ConnectionGraphQuery {
     private final ConnectionRequestRepository requests;
 
     @Override
-    public List<Long> followerIdsAfter(Long userId, long afterId, int limit) {
-        return requests.findFollowerIdsAfter(userId, afterId, limit);
+    public List<Long> connectionIdsAfter(Long userId, long afterId, int limit) {
+        return requests.findConnectionIdsAfter(userId, afterId, limit);
     }
 }

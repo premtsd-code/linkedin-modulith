@@ -43,7 +43,7 @@ class FanoutWorker implements JobRunner {
         long authorId = ctx.arg("authorId", Long.class);
         long cursor = ctx.checkpointAsLong(0L);
 
-        List<Long> page = graph.followerIdsAfter(authorId, cursor, PAGE_SIZE);
+        List<Long> page = graph.connectionIdsAfter(authorId, cursor, PAGE_SIZE);
         if (page.isEmpty()) {
             return; // done
         }
