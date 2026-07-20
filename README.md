@@ -30,8 +30,8 @@ fails the build on any reach past them.
 
 - `user` — accounts + auth. Owns the `User` aggregate. Exposes `JwtService`; publishes `UserRegisteredEvent`.
 - `post` — posts, likes, feed-of-one. Publishes `PostCreatedEvent` / `PostLikedEvent`. Calls `uploader` directly for image storage.
-- `connections` — the connection graph (JPA by default, Neo4j under the `neo4j` profile). Publishes `ConnectionRequestedEvent` / `ConnectionAcceptedEvent`; exposes `ConnectionGraphQuery` (keyset pagination for fanout).
-- `notification` — in-app notifications. One `NotificationWorker` reacts to all five events.
+- `connections` — the symmetric connection graph (JPA by default, Neo4j under the `neo4j` profile). Publishes `ConnectionRequestedEvent` / `ConnectionAcceptedEvent`; exposes `ConnectionGraphQuery.connectionIdsAfter(...)` (keyset pagination for fanout).
+- `notification` — in-app notifications. One `NotificationWorker` reacts to all five events; a scheduled `DigestWorker` (a `JobRunner`) rolls each user's unread notifications into a periodic digest.
 - `uploader` — file storage behind a `FileStorage` port (local disk, or Cloudinary under the `cloudinary` profile).
 - `feed` — materializes each post into its author's connections' feeds. The one workload that genuinely can't be a one-shot listener, so it runs on `jobs`.
 
@@ -39,7 +39,7 @@ fails the build on any reach past them.
 
 - `jobs` — a generic, domain-free **durable job runtime** (see below). `OPEN`-adjacent: domain modules depend on it; it depends on nothing domain-specific.
 - `platform` (`OPEN`) — cross-cutting technical wiring: `security` (JWT filter + Spring Security chain), `web` (global error handling), `messaging` (Kafka topic provisioning + the inbound event relay).
-- `shared` (`OPEN`) — `SecurityUtils` (the in-process replacement for the gateway's `X-User-Id` header).
+- `shared` (`OPEN`) — pure value types (`UserId`, `PostId`) + `SecurityUtils` (the in-process replacement for the gateway's `X-User-Id` header). Kept framework-free and guarded by `SharedModulePurityTests`.
 
 ## Events: in-process by default, Kafka at the seam
 
@@ -124,6 +124,9 @@ mvn test
 
 - `ModularityTests` — `verify()` fails the build on any boundary violation, plus ArchUnit
   rules that keep JobRunners in `internal.worker` and repositories internal.
+- `SharedModulePurityTests` — fails the build if `shared` grows a Spring stereotype,
+  `@Configuration`, `@Entity`, repository or controller. The one rule `verify()` can't
+  catch, so it gets its own guard (verified to fail on a planted `@Service`).
 - `AuthFlowTests` / `NotificationWorkerTests` — end-to-end HTTP + async worker on H2.
 - `JobRuntimeTests` — the jobs runtime against real Postgres via Testcontainers
   (execution, `enqueueOnce` idempotence, retry-with-backoff, checkpoint resume).
