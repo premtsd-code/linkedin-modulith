@@ -10,6 +10,7 @@ import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
  * The core value of Spring Modulith: module boundaries are ENFORCED, not just
@@ -42,6 +43,22 @@ class ModularityTests {
     void repositoriesStayInternal() {
         classes().that().areInterfaces().and().areAssignableTo(JpaRepository.class)
                 .should().resideInAPackage("..internal..")
+                .check(appClasses);
+    }
+
+    /**
+     * shared stays thin: value types + SecurityUtils only, no entities, controllers,
+     * repositories or Spring stereotypes. (SecurityUtils' use of spring-security-core is
+     * intentional and allowed.)
+     */
+    @Test
+    void sharedStaysThin() {
+        noClasses().that().resideInAPackage("..shared..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "jakarta.persistence..",
+                        "org.springframework.web..",
+                        "org.springframework.data..",
+                        "org.springframework.stereotype..")
                 .check(appClasses);
     }
 
