@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: linkedin-modulith
+  profiles:
+    # Default runs everything (web + async workers) in one process.
+    # Appwrite-style split: run the SAME jar with --spring.profiles.active=worker
+    # to host only the async listeners, and =web for only the HTTP layer.
+    active: default
+
+  # H2 in-memory so the app runs with zero external dependencies.
+  # Switch to the 'postgres' profile for the real datastore.
+  datasource:
+    url: jdbc:h2:mem:linkedin;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  # Spring Modulith event registry: persist every published event so an
+  # incomplete async handler is re-delivered after a restart (Kafka-like durability).
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          enabled: true
+      republish-outstanding-events-on-restart: true
+
+jwt:
+  # HS256 needs >= 256-bit key. Externalise this in any real deployment.
+  secret: change-me-to-a-long-random-secret-at-least-32-bytes-long!!
+
+server:
+  port: 8080
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/linkedin
+    username: linkedin
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: validate
