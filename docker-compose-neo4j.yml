@@ -1,0 +1,13 @@
+# Neo4j for the connections module's graph adapter.
+#   docker compose -f docker-compose-neo4j.yml up -d
+#   mvn spring-boot:run -Dspring-boot.run.profiles=neo4j
+# Browser UI at http://localhost:7474 (neo4j / password).
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: linkedin-neo4j
+    ports:
+      - "7474:7474"   # HTTP browser
+      - "7687:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: "neo4j/password"

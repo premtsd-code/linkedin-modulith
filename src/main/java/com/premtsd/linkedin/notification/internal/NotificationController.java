@@ -1,6 +1,6 @@
-package com.premtsd.linkedin.notification;
+package com.premtsd.linkedin.notification.internal;
 
-import com.premtsd.linkedin.SecurityUtils;
+import com.premtsd.linkedin.shared.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

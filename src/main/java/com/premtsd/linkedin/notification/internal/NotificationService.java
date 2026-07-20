@@ -1,4 +1,4 @@
-package com.premtsd.linkedin.notification;
+package com.premtsd.linkedin.notification.internal;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

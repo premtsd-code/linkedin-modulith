@@ -1,8 +1,8 @@
-package com.premtsd.linkedin.user;
+package com.premtsd.linkedin.user.internal;
 
-import com.premtsd.linkedin.user.AuthDtos.LoginRequest;
-import com.premtsd.linkedin.user.AuthDtos.SignupRequest;
-import com.premtsd.linkedin.user.AuthDtos.TokenResponse;
+import com.premtsd.linkedin.user.internal.AuthDtos.LoginRequest;
+import com.premtsd.linkedin.user.internal.AuthDtos.SignupRequest;
+import com.premtsd.linkedin.user.internal.AuthDtos.TokenResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

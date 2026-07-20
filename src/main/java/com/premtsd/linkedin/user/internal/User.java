@@ -1,4 +1,4 @@
-package com.premtsd.linkedin.user;
+package com.premtsd.linkedin.user.internal;
 
 import jakarta.persistence.*;
 import lombok.*;

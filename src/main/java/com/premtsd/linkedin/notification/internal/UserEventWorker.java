@@ -1,4 +1,4 @@
-package com.premtsd.linkedin.notification;
+package com.premtsd.linkedin.notification.internal;
 
 import com.premtsd.linkedin.user.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
  * only these listeners as a dedicated, independently-scaled worker process.
  */
 @Component
+@org.springframework.context.annotation.Profile("!web & !worker") // in-process only; Kafka split uses NotificationKafkaWorker
 @RequiredArgsConstructor
 @Slf4j
 class UserEventWorker {

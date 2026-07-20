@@ -1,14 +1,9 @@
+# ── Base config (always active) ─────────────────────────────────────────────
 spring:
   application:
     name: linkedin-modulith
-  profiles:
-    # Default runs everything (web + async workers) in one process.
-    # Appwrite-style split: run the SAME jar with --spring.profiles.active=worker
-    # to host only the async listeners, and =web for only the HTTP layer.
-    active: default
 
-  # H2 in-memory so the app runs with zero external dependencies.
-  # Switch to the 'postgres' profile for the real datastore.
+  # Single-process default: H2, in-process workers, no external services.
   datasource:
     url: jdbc:h2:mem:linkedin;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     username: sa
@@ -20,9 +15,10 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+  flyway:
+    enabled: false
 
-  # Spring Modulith event registry: persist every published event so an
-  # incomplete async handler is re-delivered after a restart (Kafka-like durability).
+  # Durable in-process event registry (used by the single-process default mode).
   modulith:
     events:
       jdbc:
@@ -30,22 +26,74 @@ spring:
           enabled: true
       republish-outstanding-events-on-restart: true
 
+  # Kafka client config. Lazy: no connection unless a 'web'/'worker' profile
+  # actually publishes or listens. Bootstrap address comes from the environment.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.premtsd.linkedin.*"
+
 jwt:
-  # HS256 needs >= 256-bit key. Externalise this in any real deployment.
-  secret: change-me-to-a-long-random-secret-at-least-32-bytes-long!!
+  secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-bytes-long!!}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 ---
+# ── postgres: real relational store (used by the web/worker containers) ──────
 spring:
   config:
     activate:
       on-profile: postgres
   datasource:
-    url: jdbc:postgresql://localhost:5432/linkedin
-    username: linkedin
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/linkedin}
+    username: ${SPRING_DATASOURCE_USERNAME:linkedin}
+    password: ${SPRING_DATASOURCE_PASSWORD:linkedin}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
+
+---
+# ── web: serves HTTP, publishes domain events to Kafka (no in-process workers) ─
+spring:
+  config:
+    activate:
+      on-profile: web
+
+---
+# ── worker: no HTTP; consumes Kafka and runs the async work. Scale this tier. ─
+spring:
+  config:
+    activate:
+      on-profile: worker
+  main:
+    web-application-type: none
+
+---
+# ── cloudinary: cloud upload backend for the uploader module ─────────────────
+spring:
+  config:
+    activate:
+      on-profile: cloudinary
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+---
+# ── neo4j: graph backend for the connections module ──────────────────────────
+spring:
+  config:
+    activate:
+      on-profile: neo4j
+  neo4j:
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${NEO4J_USER:neo4j}
+      password: ${NEO4J_PASSWORD:password}

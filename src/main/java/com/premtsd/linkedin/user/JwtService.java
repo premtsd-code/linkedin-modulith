@@ -25,7 +25,7 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    String generate(Long userId, String email, Set<String> roles) {
+    public String generate(Long userId, String email, Set<String> roles) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))

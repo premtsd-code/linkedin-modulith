@@ -2,6 +2,7 @@ package com.premtsd.linkedin;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
 /**
  * Modular monolith entry point.
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Boundaries are verified by {@code ModularityTests}.
  */
 @SpringBootApplication
+@EnableCaching
 public class LinkedinModulithApplication {
 
     public static void main(String[] args) {

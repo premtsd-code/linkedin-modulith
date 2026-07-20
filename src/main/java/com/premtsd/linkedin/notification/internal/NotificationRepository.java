@@ -1,4 +1,4 @@
-package com.premtsd.linkedin.notification;
+package com.premtsd.linkedin.notification.internal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

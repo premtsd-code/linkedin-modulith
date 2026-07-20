@@ -1,7 +1,10 @@
-package com.premtsd.linkedin.user;
+package com.premtsd.linkedin.user.internal;
 
-import com.premtsd.linkedin.user.AuthDtos.LoginRequest;
-import com.premtsd.linkedin.user.AuthDtos.SignupRequest;
+import com.premtsd.linkedin.user.JwtService;
+import com.premtsd.linkedin.user.UserRegisteredEvent;
+
+import com.premtsd.linkedin.user.internal.AuthDtos.LoginRequest;
+import com.premtsd.linkedin.user.internal.AuthDtos.SignupRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;

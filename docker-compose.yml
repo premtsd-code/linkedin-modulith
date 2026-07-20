@@ -1,0 +1,105 @@
+# Complete stack for the modulith with an independently-scalable worker tier.
+#
+#   docker compose up -d --build                 # web(1) + worker(2) + infra
+#   docker compose up -d --scale worker=5        # scale workers up
+#   docker compose up -d --scale worker=1        # scale workers down
+#   docker compose up -d --scale web=3           # scale the web tier too (behind nginx)
+#
+# Roles (same image, different SPRING_PROFILES_ACTIVE):
+#   web    -> serves HTTP, publishes domain events to Kafka
+#   worker -> no HTTP, consumes Kafka and runs the async work (notifications, graph)
+# web and worker share Postgres, so reads (in web) see what workers wrote.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: linkedin
+      POSTGRES_USER: linkedin
+      POSTGRES_PASSWORD: linkedin
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkedin -d linkedin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: "neo4j/password"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  kafka:
+    image: bitnami/kafka:3.8
+    environment:
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka:9093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: "postgres,web"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/linkedin"
+      SPRING_DATASOURCE_USERNAME: "linkedin"
+      SPRING_DATASOURCE_PASSWORD: "linkedin"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    expose:
+      - "8080"   # not published directly; reached through nginx
+
+  worker:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: "postgres,worker"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/linkedin"
+      SPRING_DATASOURCE_USERNAME: "linkedin"
+      SPRING_DATASOURCE_PASSWORD: "linkedin"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    deploy:
+      replicas: 2   # the scalable tier: `--scale worker=N`
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"   # the public entrypoint -> load-balanced web replicas
+    depends_on:
+      - web

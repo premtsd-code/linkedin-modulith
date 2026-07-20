@@ -1,4 +1,4 @@
-package com.premtsd.linkedin.user;
+package com.premtsd.linkedin.user.internal;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

@@ -1,4 +1,4 @@
-package com.premtsd.linkedin.user;
+package com.premtsd.linkedin.user.internal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

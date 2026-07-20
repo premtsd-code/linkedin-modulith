@@ -1,11 +1,11 @@
-package com.premtsd.linkedin;
+package com.premtsd.linkedin.shared;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * In-process replacement for the microservices' gateway -> {@code X-User-Id} header trick.
- * The authenticated user id now lives in the SecurityContext, so there is no
- * spoofable header to trust.
+ * Lives in the {@code shared} module so every business module can depend on it
+ * without depending on the application shell (which would create a cycle).
  */
 public final class SecurityUtils {
 
