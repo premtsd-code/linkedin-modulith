@@ -1,6 +1,6 @@
 package com.premtsd.linkedin.connections.internal;
 
-import com.premtsd.linkedin.user.UserRegisteredEvent;
+import com.premtsd.linkedin.user.events.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;

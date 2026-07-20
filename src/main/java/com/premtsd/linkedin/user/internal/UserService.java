@@ -1,7 +1,7 @@
 package com.premtsd.linkedin.user.internal;
 
 import com.premtsd.linkedin.user.JwtService;
-import com.premtsd.linkedin.user.UserRegisteredEvent;
+import com.premtsd.linkedin.user.events.UserRegisteredEvent;
 
 import com.premtsd.linkedin.user.internal.AuthDtos.LoginRequest;
 import com.premtsd.linkedin.user.internal.AuthDtos.SignupRequest;

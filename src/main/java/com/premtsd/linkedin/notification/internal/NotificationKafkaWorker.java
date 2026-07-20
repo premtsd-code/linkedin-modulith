@@ -1,11 +1,11 @@
 package com.premtsd.linkedin.notification.internal;
 
 import com.premtsd.linkedin.shared.KafkaTopics;
-import com.premtsd.linkedin.connections.AcceptConnectionRequestEvent;
-import com.premtsd.linkedin.connections.SendConnectionRequestEvent;
-import com.premtsd.linkedin.post.PostCreatedEvent;
-import com.premtsd.linkedin.post.PostLikedEvent;
-import com.premtsd.linkedin.user.UserRegisteredEvent;
+import com.premtsd.linkedin.connections.events.ConnectionAcceptedEvent;
+import com.premtsd.linkedin.connections.events.ConnectionRequestedEvent;
+import com.premtsd.linkedin.post.events.PostCreatedEvent;
+import com.premtsd.linkedin.post.events.PostLikedEvent;
+import com.premtsd.linkedin.user.events.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -43,13 +43,13 @@ class NotificationKafkaWorker {
     }
 
     @KafkaListener(topics = KafkaTopics.CONNECTION_REQUESTED, groupId = GROUP)
-    void onConnectionRequested(SendConnectionRequestEvent e) {
+    void onConnectionRequested(ConnectionRequestedEvent e) {
         notificationService.create(e.receiverId(),
                 "You received a connection request from user " + e.senderId() + ".");
     }
 
     @KafkaListener(topics = KafkaTopics.CONNECTION_ACCEPTED, groupId = GROUP)
-    void onConnectionAccepted(AcceptConnectionRequestEvent e) {
+    void onConnectionAccepted(ConnectionAcceptedEvent e) {
         notificationService.create(e.senderId(),
                 "User " + e.receiverId() + " accepted your connection request.");
     }

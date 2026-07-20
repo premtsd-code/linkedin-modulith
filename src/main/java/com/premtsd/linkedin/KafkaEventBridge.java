@@ -1,11 +1,11 @@
 package com.premtsd.linkedin;
 
 import com.premtsd.linkedin.shared.KafkaTopics;
-import com.premtsd.linkedin.connections.AcceptConnectionRequestEvent;
-import com.premtsd.linkedin.connections.SendConnectionRequestEvent;
-import com.premtsd.linkedin.post.PostCreatedEvent;
-import com.premtsd.linkedin.post.PostLikedEvent;
-import com.premtsd.linkedin.user.UserRegisteredEvent;
+import com.premtsd.linkedin.connections.events.ConnectionAcceptedEvent;
+import com.premtsd.linkedin.connections.events.ConnectionRequestedEvent;
+import com.premtsd.linkedin.post.events.PostCreatedEvent;
+import com.premtsd.linkedin.post.events.PostLikedEvent;
+import com.premtsd.linkedin.user.events.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -40,12 +40,12 @@ class KafkaEventBridge {
     }
 
     @ApplicationModuleListener
-    void onConnectionRequested(SendConnectionRequestEvent e) {
+    void onConnectionRequested(ConnectionRequestedEvent e) {
         kafka.send(KafkaTopics.CONNECTION_REQUESTED, String.valueOf(e.receiverId()), e);
     }
 
     @ApplicationModuleListener
-    void onConnectionAccepted(AcceptConnectionRequestEvent e) {
+    void onConnectionAccepted(ConnectionAcceptedEvent e) {
         kafka.send(KafkaTopics.CONNECTION_ACCEPTED, String.valueOf(e.senderId()), e);
     }
 }

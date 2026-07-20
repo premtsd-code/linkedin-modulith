@@ -1,7 +1,7 @@
 package com.premtsd.linkedin.post.internal;
 
-import com.premtsd.linkedin.post.PostCreatedEvent;
-import com.premtsd.linkedin.post.PostLikedEvent;
+import com.premtsd.linkedin.post.events.PostCreatedEvent;
+import com.premtsd.linkedin.post.events.PostLikedEvent;
 
 import com.premtsd.linkedin.post.internal.PostDtos.CreatePostRequest;
 import com.premtsd.linkedin.post.internal.PostDtos.PostView;
@@ -48,7 +48,7 @@ class PostService {
         Post post = postRepository.save(Post.builder()
                 .userId(authorId).content(content).imageUrl(imageUrl).build());
         log.info("Post created id={} author={}", post.getId(), authorId);
-        events.publishEvent(new PostCreatedEvent(post.getId(), authorId, post.getContent()));
+        events.publishEvent(new PostCreatedEvent(post.getId(), authorId));
         return toView(post);
     }
 

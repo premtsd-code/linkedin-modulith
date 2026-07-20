@@ -1,7 +1,7 @@
 package com.premtsd.linkedin.connections.internal;
 
-import com.premtsd.linkedin.connections.AcceptConnectionRequestEvent;
-import com.premtsd.linkedin.connections.SendConnectionRequestEvent;
+import com.premtsd.linkedin.connections.events.ConnectionAcceptedEvent;
+import com.premtsd.linkedin.connections.events.ConnectionRequestedEvent;
 
 import com.premtsd.linkedin.connections.internal.ConnectionsDtos.PersonView;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ class ConnectionsService {
         }
         graph.createPendingRequest(senderId, receiverId);
         log.info("Connection request {} -> {}", senderId, receiverId);
-        events.publishEvent(new SendConnectionRequestEvent(senderId, receiverId));
+        events.publishEvent(new ConnectionRequestedEvent(senderId, receiverId));
     }
 
     @Transactional
@@ -43,7 +43,7 @@ class ConnectionsService {
             throw new IllegalArgumentException("No pending request from " + senderId);
         }
         log.info("Connection accepted {} <-> {}", senderId, receiverId);
-        events.publishEvent(new AcceptConnectionRequestEvent(senderId, receiverId));
+        events.publishEvent(new ConnectionAcceptedEvent(senderId, receiverId));
     }
 
     @Transactional(readOnly = true)

@@ -1,7 +1,7 @@
 package com.premtsd.linkedin.notification.internal;
 
-import com.premtsd.linkedin.connections.AcceptConnectionRequestEvent;
-import com.premtsd.linkedin.connections.SendConnectionRequestEvent;
+import com.premtsd.linkedin.connections.events.ConnectionAcceptedEvent;
+import com.premtsd.linkedin.connections.events.ConnectionRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -17,13 +17,13 @@ class ConnectionEventWorker {
     private final NotificationService notificationService;
 
     @ApplicationModuleListener
-    void onRequestSent(SendConnectionRequestEvent event) {
+    void onRequestSent(ConnectionRequestedEvent event) {
         notificationService.create(event.receiverId(),
                 "You received a connection request from user " + event.senderId() + ".");
     }
 
     @ApplicationModuleListener
-    void onRequestAccepted(AcceptConnectionRequestEvent event) {
+    void onRequestAccepted(ConnectionAcceptedEvent event) {
         notificationService.create(event.senderId(),
                 "User " + event.receiverId() + " accepted your connection request.");
     }
