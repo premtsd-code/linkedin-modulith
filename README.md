@@ -7,6 +7,9 @@ boundaries enforced at build time instead of at the network.
 Keeping both side by side is the point: it makes the microservices-vs-modulith
 trade-off concrete and demonstrable.
 
+> 📐 See **[ARCHITECTURE.md](ARCHITECTURE.md)** for the module dependency graph, event-flow,
+> fanout sequence, job-lifecycle and deployment diagrams (rendered inline on GitHub).
+
 ## Why this exists / what it demonstrates
 
 | Microservices version | Modulith version |
