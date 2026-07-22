@@ -3,6 +3,20 @@ spring:
   application:
     name: linkedin-modulith
 
+  # Environment umbrellas over the capability profiles (postgres/neo4j/feeddb/web/worker).
+  # An environment says WHERE we run; it expands to the capabilities that shape needs:
+  #   dev  -> nothing extra: single-process H2, everything in-process (the default shape)
+  #   prod -> the real datastores; still add the role ('web' or 'worker') alongside it,
+  #           e.g. SPRING_PROFILES_ACTIVE=prod,web  /  prod,worker
+  # 'feeddb' stays the actual switch for the dedicated feed DB — 'prod' just includes it.
+  profiles:
+    group:
+      dev: []
+      prod:
+        - postgres
+        - neo4j
+        - feeddb
+
   # Single-process default: H2, in-process workers, no external services.
   datasource:
     url: jdbc:h2:mem:linkedin;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
@@ -61,6 +75,11 @@ app:
   role: ${APP_ROLE:standalone}
   worker:
     group: ${WORKER_GROUP:linkedin-workers}
+  # Read-your-writes sticky window (feeddb): after a user writes, their reads go to the
+  # primary for this long, so an async replica's lag can't hide their own change. Set it
+  # to a bit more than the largest replication lag you expect to see.
+  ryow:
+    window: ${RYOW_WINDOW:5s}
 
 # Durable job runtime (worker role). See the pitfalls before tuning:
 #   lease-duration MUST exceed the slowest single run() slice, or the reaper hands
@@ -135,3 +154,39 @@ spring:
     authentication:
       username: ${NEO4J_USER:neo4j}
       password: ${NEO4J_PASSWORD:password}
+
+---
+# ── feeddb: dedicated Postgres (DB B) for the feed + notification modules ─────
+# Moves FeedEntry + Notification to a SECOND Postgres, wired by platform.persistence
+# (a second DataSource / EMF / transactionManager). Everything else — users, posts,
+# connections, jobs, the Modulith event registry — stays on the primary datasource.
+# Combine with 'postgres' for the primary DB.
+#
+# Read replicas: each DB's DataSource routes read-only transactions to its '.read'
+# endpoint (a reader endpoint / HAProxy over N replicas) and writes/DDL to the primary.
+# Each '.read.url' defaults to its own primary, so with NO replica set nothing changes —
+# reads and writes both hit the primary. Point *_DATASOURCE_READ_URL at the replicas to
+# switch reads over, no code change. Mind replication lag: a read right after a write may
+# be stale (put strict read-your-writes paths in a non-readOnly tx so they hit the primary).
+spring:
+  config:
+    activate:
+      on-profile: feeddb
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+  datasource:
+    read:
+      url: ${SPRING_DATASOURCE_READ_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/linkedin}}
+      username: ${SPRING_DATASOURCE_READ_USERNAME:${SPRING_DATASOURCE_USERNAME:linkedin}}
+      password: ${SPRING_DATASOURCE_READ_PASSWORD:${SPRING_DATASOURCE_PASSWORD:linkedin}}
+feed:
+  datasource:
+    url: ${FEED_DATASOURCE_URL:jdbc:postgresql://localhost:5433/linkedin_feed}
+    username: ${FEED_DATASOURCE_USERNAME:linkedin}
+    password: ${FEED_DATASOURCE_PASSWORD:linkedin}
+    read:
+      url: ${FEED_DATASOURCE_READ_URL:${FEED_DATASOURCE_URL:jdbc:postgresql://localhost:5433/linkedin_feed}}
+      username: ${FEED_DATASOURCE_READ_USERNAME:${FEED_DATASOURCE_USERNAME:linkedin}}
+      password: ${FEED_DATASOURCE_READ_PASSWORD:${FEED_DATASOURCE_PASSWORD:linkedin}}

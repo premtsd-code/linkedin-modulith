@@ -19,10 +19,10 @@ class NotificationController {
     @GetMapping
     public List<NotificationView> myNotifications() {
         return notificationService.forUser(SecurityUtils.currentUserId()).stream()
-                .map(n -> new NotificationView(n.getId(), n.getMessage(), n.isRead(), n.getCreatedAt()))
+                .map(n -> new NotificationView(n.id(), n.message(), n.read(), n.createdAt()))
                 .toList();
     }
 
-    record NotificationView(Long id, String message, boolean read, Instant createdAt) {
+    record NotificationView(String id, String message, boolean read, Instant createdAt) {
     }
 }

@@ -8,22 +8,58 @@
 # Roles (same image, different SPRING_PROFILES_ACTIVE):
 #   web    -> serves HTTP, publishes domain events to Kafka
 #   worker -> no HTTP, consumes Kafka and runs the async work (notifications, graph)
-# web and worker share Postgres, so reads (in web) see what workers wrote.
+#
+# Each database (A = linkedin, B = linkedin_feed) is a Patroni HA cluster: two Postgres
+# nodes coordinating through etcd, with automatic leader election + failover. HAProxy is
+# the single entry point — it health-checks Patroni to route writes to the live leader and
+# reads to the replicas, so a primary failure promotes a replica with no app change.
+# Watch it: HAProxy stats at http://localhost:7000 ; kill a leader with `docker kill`.
+# Add replicas: docker compose up -d --scale patroni-a=3 --scale patroni-b=3
 
 services:
-  postgres:
-    image: postgres:16
+  # ── etcd: the quorum-backed store where Patroni records who the leader is ─────
+  # Single node here for a local demo. PRODUCTION MUST run 3 (or 5) etcd nodes, or a
+  # network blip can stall failover — a one-node etcd is itself a single point of failure.
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.17
     environment:
-      POSTGRES_DB: linkedin
-      POSTGRES_USER: linkedin
-      POSTGRES_PASSWORD: linkedin
-    ports:
-      - "5432:5432"
+      ETCD_NAME: etcd0
+      ETCD_INITIAL_CLUSTER: etcd0=http://etcd:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: linkedin-etcd
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U linkedin -d linkedin"]
+      test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 15
+
+  # ── DB A cluster: Patroni nodes that elect a leader among themselves ─────────
+  # Add replicas by scaling: docker compose up -d --scale patroni-a=3
+  # Each node advertises its own IP (see patroni/entrypoint.sh), so scaling just works;
+  # HAProxy discovers the new nodes by DNS. One becomes leader, the rest replicate.
+  patroni-a:
+    build: { context: ., dockerfile: Dockerfile.patroni }
+    image: linkedin-patroni
+    environment:
+      SCOPE: linkedin-a
+      APP_DB: linkedin
+      APP_USER: linkedin
+      APP_PASSWORD: linkedin
+      ETCD_HOSTS: etcd:2379
+    depends_on:
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8008/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      replicas: 2   # 1 leader + 1 replica by default; raise with --scale patroni-a=N
 
   neo4j:
     image: neo4j:5-community
@@ -42,6 +78,45 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  # ── DB B cluster (feed / notification): own scope 'linkedin-b' ───────────────
+  # Add replicas by scaling: docker compose up -d --scale patroni-b=3
+  patroni-b:
+    image: linkedin-patroni
+    depends_on:
+      etcd:
+        condition: service_healthy
+      patroni-a:
+        condition: service_started   # reuse the image built by patroni-a
+    environment:
+      SCOPE: linkedin-b
+      APP_DB: linkedin_feed
+      APP_USER: linkedin
+      APP_PASSWORD: linkedin
+      ETCD_HOSTS: etcd:2379
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8008/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      replicas: 2   # raise with --scale patroni-b=N
+
+  # Single entry point for both DBs. Routes writes to the current leader and reads to
+  # replicas by health-checking each node's Patroni REST API — so it follows failover.
+  haproxy:
+    image: haproxy:2.9
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "5000:5000"   # DB A write (leader)
+      - "5001:5001"   # DB A read  (replicas)
+      - "5010:5010"   # DB B write (leader)
+      - "5011:5011"   # DB B read  (replicas)
+      - "7000:7000"   # stats UI
+    depends_on:
+      - patroni-a
+      - patroni-b
 
   kafka:
     # Bitnami removed free images from docker.io/bitnami/* in 2025; archived under bitnamilegacy/*.
@@ -67,32 +142,65 @@ services:
   web:
     build: .
     environment:
-      SPRING_PROFILES_ACTIVE: "postgres,web"
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/linkedin"
+      # Polyglot persistence: Postgres (user/post/jobs), Postgres-feed (feed/notification), Neo4j (connections)
+      SPRING_PROFILES_ACTIVE: "prod,web"   # prod = postgres,neo4j,feeddb (see application.yml)
+      # Everything via HAProxy: :5000/:5010 = current leader (writes), :5001/:5011 = replicas (reads).
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://haproxy:5000/linkedin"
+      SPRING_DATASOURCE_READ_URL: "jdbc:postgresql://haproxy:5001/linkedin"
       SPRING_DATASOURCE_USERNAME: "linkedin"
       SPRING_DATASOURCE_PASSWORD: "linkedin"
+      FEED_DATASOURCE_URL: "jdbc:postgresql://haproxy:5010/linkedin_feed"
+      FEED_DATASOURCE_READ_URL: "jdbc:postgresql://haproxy:5011/linkedin_feed"
+      FEED_DATASOURCE_USERNAME: "linkedin"
+      FEED_DATASOURCE_PASSWORD: "linkedin"
+      NEO4J_URI: "bolt://neo4j:7687"
+      NEO4J_USER: "neo4j"
+      NEO4J_PASSWORD: "password"
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      SPRING_DATA_REDIS_HOST: "redis"
     depends_on:
-      postgres:
+      patroni-a:
+        condition: service_healthy
+      patroni-b:
+        condition: service_healthy
+      neo4j:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      haproxy:
+        condition: service_started
     expose:
       - "8080"   # not published directly; reached through nginx
 
   worker:
     build: .
     environment:
-      SPRING_PROFILES_ACTIVE: "postgres,worker"
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/linkedin"
+      SPRING_PROFILES_ACTIVE: "prod,worker"   # prod = postgres,neo4j,feeddb (see application.yml)
+      # Everything via HAProxy: :5000/:5010 = current leader (writes), :5001/:5011 = replicas (reads).
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://haproxy:5000/linkedin"
+      SPRING_DATASOURCE_READ_URL: "jdbc:postgresql://haproxy:5001/linkedin"
       SPRING_DATASOURCE_USERNAME: "linkedin"
       SPRING_DATASOURCE_PASSWORD: "linkedin"
+      FEED_DATASOURCE_URL: "jdbc:postgresql://haproxy:5010/linkedin_feed"
+      FEED_DATASOURCE_READ_URL: "jdbc:postgresql://haproxy:5011/linkedin_feed"
+      FEED_DATASOURCE_USERNAME: "linkedin"
+      FEED_DATASOURCE_PASSWORD: "linkedin"
+      NEO4J_URI: "bolt://neo4j:7687"
+      NEO4J_USER: "neo4j"
+      NEO4J_PASSWORD: "password"
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      SPRING_DATA_REDIS_HOST: "redis"
     depends_on:
-      postgres:
+      patroni-a:
+        condition: service_healthy
+      patroni-b:
+        condition: service_healthy
+      neo4j:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      haproxy:
+        condition: service_started
     deploy:
       replicas: 2   # the scalable tier: `--scale worker=N`
 

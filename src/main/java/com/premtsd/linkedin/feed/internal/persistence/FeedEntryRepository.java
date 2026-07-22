@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 
-public interface FeedEntryRepository extends JpaRepository<FeedEntry, Long> {
+interface FeedEntryRepository extends JpaRepository<FeedEntry, Long> {
 
     /**
      * Insert one post into many owners' feeds in a single round-trip. Postgres-only

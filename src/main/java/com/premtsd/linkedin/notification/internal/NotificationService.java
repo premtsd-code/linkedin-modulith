@@ -1,38 +1,37 @@
 package com.premtsd.linkedin.notification.internal;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Notification rules. Depends only on the {@link NotificationStore} port, so the same logic
+ * runs whether notifications live in the primary database or the dedicated one (the 'feeddb'
+ * profile). Each operation is a single store call, so no multi-statement transaction is needed.
+ */
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
 
-    private final NotificationRepository repository;
+    private final NotificationStore store;
 
-    @Transactional
     public void create(Long userId, String message) {
-        repository.save(Notification.builder().userId(userId).message(message).build());
+        store.save(userId, message);
     }
 
-    @Transactional(readOnly = true)
-    List<Notification> forUser(Long userId) {
-        return repository.findByUserIdOrderByCreatedAtDesc(userId);
+    List<NotificationItem> forUser(Long userId) {
+        return store.findByUserNewestFirst(userId);
     }
 
     /** Keyset page (ids &gt; afterUserId) of users who currently have unread notifications. */
-    @Transactional(readOnly = true)
     public List<Long> usersWithUnreadAfter(long afterUserId, int limit) {
-        return repository.findUnreadOwnerIdsAfter(afterUserId, PageRequest.of(0, limit));
+        return store.unreadOwnerIdsAfter(afterUserId, limit);
     }
 
     /** Roll a user's unread notifications into one digest notification. No-op if none unread. */
-    @Transactional
     public void sendDigest(Long userId) {
-        long unread = repository.countByUserIdAndReadFalse(userId);
+        long unread = store.countUnread(userId);
         if (unread > 0) {
             create(userId, "Digest: you have " + unread + " unread notification" + (unread == 1 ? "" : "s") + ".");
         }
