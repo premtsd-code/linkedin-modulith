@@ -1,7 +1,7 @@
 package com.premtsd.linkedin.feed.internal.worker;
 
 import com.premtsd.linkedin.connections.ConnectionGraphQuery;
-import com.premtsd.linkedin.feed.internal.persistence.FeedEntryRepository;
+import com.premtsd.linkedin.feed.internal.persistence.FeedStore;
 import com.premtsd.linkedin.jobs.JobContext;
 import com.premtsd.linkedin.jobs.JobRunner;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ class FanoutWorker implements JobRunner {
     private static final int PAGE_SIZE = 500;
 
     private final ConnectionGraphQuery graph;
-    private final FeedEntryRepository feed;
+    private final FeedStore feed;
 
     @Override
     public String type() {
@@ -48,7 +48,7 @@ class FanoutWorker implements JobRunner {
             return; // done
         }
 
-        feed.insertBatch(page.toArray(Long[]::new), postId, authorId);
+        feed.insertBatch(page, postId, authorId);
 
         if (page.size() == PAGE_SIZE) {
             ctx.reschedule(page.get(page.size() - 1)); // continue from the last owner id

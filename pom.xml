@@ -61,6 +61,13 @@
             <artifactId>spring-boot-starter-data-neo4j</artifactId>
         </dependency>
 
+        <!-- Redis: the shared store behind the read-your-writes sticky window (feeddb).
+             Lettuce connects lazily, so the default (H2) run and tests never touch a server. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- Kafka: the event transport between the web tier and the scalable worker tier
              (only used under the 'web'/'worker' profiles; lazy otherwise). -->
         <dependency>

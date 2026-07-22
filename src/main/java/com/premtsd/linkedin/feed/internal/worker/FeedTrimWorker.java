@@ -1,6 +1,6 @@
 package com.premtsd.linkedin.feed.internal.worker;
 
-import com.premtsd.linkedin.feed.internal.persistence.FeedEntryRepository;
+import com.premtsd.linkedin.feed.internal.persistence.FeedStore;
 import com.premtsd.linkedin.jobs.JobContext;
 import com.premtsd.linkedin.jobs.JobRunner;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ class FeedTrimWorker implements JobRunner {
     private static final Duration RETENTION = Duration.ofDays(90);
     private static final int BATCH = 1000;
 
-    private final FeedEntryRepository feed;
+    private final FeedStore feed;
 
     @Override
     public String type() {
